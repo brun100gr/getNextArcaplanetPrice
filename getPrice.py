@@ -1,4 +1,5 @@
 import re
+import requests
 from datetime import datetime
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 # CONFIG
 # --------------------------------------------------
 URL = "https://www.arcaplanet.it/next-natural-cat-lattina-multipack-6x50g-5307/p"
+APPS_SCRIPT_URL = "..."
 DUMP_DIR = Path("dump")
 CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 
@@ -75,6 +77,16 @@ def extract_price_from_html(html_path):
     raise ValueError("Prezzo non trovato")
 
 # --------------------------------------------------
+# SALVA IL PREZZO su Google sheets
+# --------------------------------------------------
+def salva_prezzo(prezzo):
+    requests.post(
+        APPS_SCRIPT_URL,
+        json={"prezzo": round(prezzo, 2)},
+        timeout=10
+    )
+
+# --------------------------------------------------
 # MAIN
 # --------------------------------------------------
 def main():
@@ -94,6 +106,8 @@ def main():
         print(f"✅ Prezzo trovato: {prezzo:.2f} €")
         print(f"📄 HTML salvato in: {html_path}")
         print(f"📸 Screenshot salvato in: {png_path}")
+
+        salva_prezzo(prezzo)
 
     except Exception as e:
         print("❌ Errore:", e)

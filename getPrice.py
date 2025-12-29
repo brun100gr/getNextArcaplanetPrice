@@ -1,8 +1,10 @@
 import re
 import requests
+import os
+
+from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
-
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -15,11 +17,15 @@ from selenium.webdriver.support import expected_conditions as EC
 # CONFIG
 # --------------------------------------------------
 URL = "https://www.arcaplanet.it/next-natural-cat-lattina-multipack-6x50g-5307/p"
-APPS_SCRIPT_URL = "..."
 DUMP_DIR = Path("dump")
 CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 
 DUMP_DIR.mkdir(exist_ok=True)
+
+load_dotenv()
+APPS_SCRIPT_URL = os.getenv("APPS_SCRIPT_URL")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # --------------------------------------------------
 # SELENIUM SETUP
@@ -87,6 +93,36 @@ def salva_prezzo(prezzo):
     )
 
 # --------------------------------------------------
+# INVIA IL PREZZO via Telegram
+# --------------------------------------------------
+def send_telegram_message(text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    requests.post(url, data=payload)
+
+# --------------------------------------------------
+# INVIA IL SCREENSHOT via Telegram
+# --------------------------------------------------
+def send_telegram_photo(photo_path, caption=None):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
+
+    with open(photo_path, "rb") as photo:
+        files = {
+            "photo": photo
+        }
+        data = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "caption": caption,
+            "parse_mode": "HTML"
+        }
+
+        requests.post(url, files=files, data=data)
+
+# --------------------------------------------------
 # MAIN
 # --------------------------------------------------
 def main():
@@ -107,7 +143,18 @@ def main():
         print(f"📄 HTML salvato in: {html_path}")
         print(f"📸 Screenshot salvato in: {png_path}")
 
-        salva_prezzo(prezzo)
+        if prezzo:
+            salva_prezzo(prezzo)
+
+            send_telegram_photo(
+                png_path,
+                caption=(
+                    f"🐱 <b>Prezzo rilevato</b>\n"
+                    f"Prodotto: Next Natural Cat 6x50g\n"
+                    f"Prezzo: <b>{prezzo:.2f} €</b>\n"
+                    f"🕒 {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+                )
+            )
 
     except Exception as e:
         print("❌ Errore:", e)
@@ -118,4 +165,3 @@ def main():
 # --------------------------------------------------
 if __name__ == "__main__":
     main()
-

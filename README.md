@@ -23,6 +23,8 @@ cd getNextArcaplanetPrice
 python3 -m venv myenv
 source myenv/bin/activate
 pip3 install -r requirements.txt
+
+sudo timedatectl set-timezone Europe/Rome
 ```
 
 ## Environment check
@@ -34,4 +36,6 @@ from selenium import webdriver
 from bs4 import BeautifulSoup
 print("OK")
 EOF
+
+date
 ```

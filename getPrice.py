@@ -1,17 +1,17 @@
+import os
 import re
 import requests
-import os
 
-from dotenv import load_dotenv
-from datetime import datetime
-from pathlib import Path
 from bs4 import BeautifulSoup
+from datetime import datetime
+from dotenv import load_dotenv
+from pathlib import Path
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # --------------------------------------------------
 # CONFIG
@@ -49,7 +49,7 @@ def save_page(driver):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     html_path = DUMP_DIR / f"arcaplanet_{timestamp}.html"
-    png_path  = DUMP_DIR / f"arcaplanet_{timestamp}.png"
+    png_path = DUMP_DIR / f"arcaplanet_{timestamp}.png"
 
     html_path.write_text(driver.page_source, encoding="utf-8")
     driver.save_screenshot(str(png_path))
@@ -65,7 +65,7 @@ def extract_price_from_html(html_path):
 
     text = soup.get_text(separator=" ", strip=True)
 
-    # 1️⃣ Metodo principale: "Ordine singolo:"
+    # 1️⃣ Primary method: "Single order:"
     match = re.search(
         r"Ordine singolo:\s*€?\s*([\d.,]+)",
         text,
@@ -80,20 +80,21 @@ def extract_price_from_html(html_path):
     if meta_price and meta_price.get("content"):
         return float(meta_price["content"])
 
-    raise ValueError("Prezzo non trovato")
+    raise ValueError("Price not found")
+
 
 # --------------------------------------------------
-# SALVA IL PREZZO su Google sheets
+# SAVE PRICE to Google Sheets
 # --------------------------------------------------
-def salva_prezzo(prezzo):
+def save_price(price):
     requests.post(
         APPS_SCRIPT_URL,
-        json={"prezzo": round(prezzo, 2)},
+        json={"prezzo": round(price, 2)},
         timeout=10
     )
 
 # --------------------------------------------------
-# INVIA IL PREZZO via Telegram
+# SEND PRICE via Telegram
 # --------------------------------------------------
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -105,7 +106,7 @@ def send_telegram_message(text):
     requests.post(url, data=payload)
 
 # --------------------------------------------------
-# INVIA IL SCREENSHOT via Telegram
+# SEND SCREENSHOT via Telegram
 # --------------------------------------------------
 def send_telegram_photo(photo_path, caption=None):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto"
@@ -132,32 +133,32 @@ def main():
     try:
         driver.get(URL)
 
-        # attende che la pagina carichi qualcosa di significativo
+        # Wait for page to load significant content
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "main")))
 
         html_path, png_path = save_page(driver)
 
-        prezzo = extract_price_from_html(html_path)
+        price = extract_price_from_html(html_path)
 
-        print(f"✅ Prezzo trovato: {prezzo:.2f} €")
-        print(f"📄 HTML salvato in: {html_path}")
-        print(f"📸 Screenshot salvato in: {png_path}")
+        print(f"✅ Price found: {price:.2f} €")
+        print(f"📄 HTML saved in: {html_path}")
+        print(f"📸 Screenshot saved in: {png_path}")
 
-        if prezzo:
-            salva_prezzo(prezzo)
+        if price:
+            save_price(price)
 
             send_telegram_photo(
                 png_path,
                 caption=(
-                    f"🐱 <b>Prezzo rilevato</b>\n"
-                    f"Prodotto: Next Natural Cat 6x50g\n"
-                    f"Prezzo: <b>{prezzo:.2f} €</b>\n"
+                    f"🐱 <b>Price detected</b>\n"
+                    f"Product: Next Natural Cat 6x50g\n"
+                    f"Price: <b>{price:.2f} €</b>\n"
                     f"🕒 {datetime.now().strftime('%d/%m/%Y %H:%M')}"
                 )
             )
 
     except Exception as e:
-        print("❌ Errore:", e)
+        print(f"❌ Error: {e}")
 
     finally:
         driver.quit()

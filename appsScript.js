@@ -1,7 +1,7 @@
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
-    const nuovoPrezzo = Number(data.prezzo);
+    const newPrice = Number(data.prezzo);
 
     const sheet = SpreadsheetApp
       .getActiveSpreadsheet()
@@ -9,43 +9,43 @@ function doPost(e) {
 
     const lastRow = sheet.getLastRow();
 
-    // Prima riga (solo intestazione)
+    // First row (header only)
     if (lastRow < 2) {
-      sheet.appendRow([new Date(), nuovoPrezzo]);
-      return ok("Prima riga inserita");
+      sheet.appendRow([new Date(), newPrice]);
+      return ok("First row inserted");
     }
 
-    const lastDate  = sheet.getRange(lastRow, 1).getValue();
+    const lastDate = sheet.getRange(lastRow, 1).getValue();
     const lastPrice = Number(sheet.getRange(lastRow, 2).getValue());
 
     const today = new Date();
     const sameDay = isSameDay(today, lastDate);
 
-    // 🔁 STESSO GIORNO
+    // 🔄 SAME DAY
     if (sameDay) {
-      if (nuovoPrezzo === lastPrice) {
-        return ok("Prezzo invariato");
+      if (newPrice === lastPrice) {
+        return ok("Price unchanged");
       }
 
       const cell = sheet.getRange(lastRow, 2);
 
-      // ⚠️ colore PRIMA, valore DOPO
-      colora(cell, nuovoPrezzo, lastPrice);
-      cell.setValue(nuovoPrezzo);
+      // ⚠️ Color FIRST, value AFTER
+      colorCell(cell, newPrice, lastPrice);
+      cell.setValue(newPrice);
 
       SpreadsheetApp.flush();
-      return ok("Prezzo aggiornato oggi");
+      return ok("Price updated today");
     }
 
-    // 🆕 NUOVO GIORNO
-    sheet.appendRow([today, nuovoPrezzo]);
+    // 🆕 NEW DAY
+    sheet.appendRow([today, newPrice]);
     const newLastRow = sheet.getLastRow();
     const cell = sheet.getRange(newLastRow, 2);
 
-    colora(cell, nuovoPrezzo, lastPrice);
+    colorCell(cell, newPrice, lastPrice);
     SpreadsheetApp.flush();
 
-    return ok("Nuovo giorno, riga aggiunta");
+    return ok("New day, row added");
 
   } catch (err) {
     return ContentService
@@ -54,13 +54,13 @@ function doPost(e) {
   }
 }
 
-function colora(cell, nuovo, precedente) {
+function colorCell(cell, newPrice, previousPrice) {
   cell.setBackground(null); // reset
 
-  if (nuovo > precedente) {
-    cell.setBackground("#f4cccc"); // 🟥 rosso chiaro
-  } else if (nuovo < precedente) {
-    cell.setBackground("#d9ead3"); // 🟢 verde chiaro
+  if (newPrice > previousPrice) {
+    cell.setBackground("#f4cccc"); // 🔴 light red
+  } else if (newPrice < previousPrice) {
+    cell.setBackground("#d9ead3"); // 🟢 light green
   }
 }
 

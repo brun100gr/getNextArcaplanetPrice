@@ -9,7 +9,7 @@ function doPost(e) {
 
     const lastRow = sheet.getLastRow();
 
-    // Prima riga reale
+    // Prima riga (solo intestazione)
     if (lastRow < 2) {
       sheet.appendRow([new Date(), nuovoPrezzo]);
       return ok("Prima riga inserita");
@@ -21,24 +21,29 @@ function doPost(e) {
     const today = new Date();
     const sameDay = isSameDay(today, lastDate);
 
-    // stesso giorno
+    // 🔁 STESSO GIORNO
     if (sameDay) {
       if (nuovoPrezzo === lastPrice) {
         return ok("Prezzo invariato");
       }
 
-      // aggiorna prezzo + colore
       const cell = sheet.getRange(lastRow, 2);
-      cell.setValue(nuovoPrezzo);
-      colora(cell, nuovoPrezzo, lastPrice);
 
+      // ⚠️ colore PRIMA, valore DOPO
+      colora(cell, nuovoPrezzo, lastPrice);
+      cell.setValue(nuovoPrezzo);
+
+      SpreadsheetApp.flush();
       return ok("Prezzo aggiornato oggi");
     }
 
-    // giorno diverso → nuova riga
-    const newRow = sheet.appendRow([today, nuovoPrezzo]).getRow();
-    const cell = sheet.getRange(newRow, 2);
+    // 🆕 NUOVO GIORNO
+    sheet.appendRow([today, nuovoPrezzo]);
+    const newLastRow = sheet.getLastRow();
+    const cell = sheet.getRange(newLastRow, 2);
+
     colora(cell, nuovoPrezzo, lastPrice);
+    SpreadsheetApp.flush();
 
     return ok("Nuovo giorno, riga aggiunta");
 
@@ -50,12 +55,12 @@ function doPost(e) {
 }
 
 function colora(cell, nuovo, precedente) {
+  cell.setBackground(null); // reset
+
   if (nuovo > precedente) {
-    cell.setBackground("#f4cccc"); // rosso chiaro
+    cell.setBackground("#f4cccc"); // 🟥 rosso chiaro
   } else if (nuovo < precedente) {
-    cell.setBackground("#d9ead3"); // verde chiaro
-  } else {
-    cell.setBackground(null);
+    cell.setBackground("#d9ead3"); // 🟢 verde chiaro
   }
 }
 

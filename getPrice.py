@@ -124,6 +124,34 @@ def send_telegram_photo(photo_path, caption=None):
         requests.post(url, files=files, data=data)
 
 # --------------------------------------------------
+# WAIT WEB PAGE
+# --------------------------------------------------
+def wait_for_stable_render(driver, timeout=10):
+    driver.execute_script("""
+        let lastHeight = document.body.scrollHeight;
+        let stableCount = 0;
+        window.__stable = false;
+
+        const interval = setInterval(() => {
+            const newHeight = document.body.scrollHeight;
+            if (newHeight === lastHeight) {
+                stableCount++;
+                if (stableCount >= 5) {
+                    window.__stable = true;
+                    clearInterval(interval);
+                }
+            } else {
+                stableCount = 0;
+                lastHeight = newHeight;
+            }
+        }, 200);
+    """)
+
+    WebDriverWait(driver, timeout).until(
+        lambda d: d.execute_script("return window.__stable === true")
+    )
+
+# --------------------------------------------------
 # MAIN
 # --------------------------------------------------
 def main():
@@ -133,8 +161,18 @@ def main():
     try:
         driver.get(URL)
 
-        # Wait for page to load significant content
-        wait.until(EC.presence_of_element_located((By.TAG_NAME, "main")))
+        # 1️⃣ DOM caricato
+        wait.until(lambda d: d.execute_script("return document.readyState") == "complete")
+
+        # 2️⃣ Prezzo presente nel DOM
+        wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, "main [class*='price']")
+            )
+        )
+
+        # 3️⃣🔥 ATTENDI RENDER STABILE
+        wait_for_stable_render(driver)
 
         html_path, png_path = save_page(driver)
 

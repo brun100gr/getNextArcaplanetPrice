@@ -1,6 +1,8 @@
 import os
 import re
 import requests
+import socket
+import urllib3.util.connection as urllib3_cn
 
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -28,6 +30,14 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # --------------------------------------------------
+# FORCE IPV4
+# --------------------------------------------------
+def force_ipv4():
+    def allowed_gai_family():
+        return socket.AF_INET
+    urllib3_cn.allowed_gai_family = allowed_gai_family
+
+# --------------------------------------------------
 # SELENIUM SETUP
 # --------------------------------------------------
 def create_driver():
@@ -36,6 +46,7 @@ def create_driver():
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
+    options.binary_location = "/usr/bin/chromium"
 
     return webdriver.Chrome(
         service=Service(CHROMEDRIVER_PATH),
@@ -155,6 +166,8 @@ def wait_for_stable_render(driver, timeout=10):
 # MAIN
 # --------------------------------------------------
 def main():
+    force_ipv4()
+
     driver = create_driver()
     wait = WebDriverWait(driver, 10)
 
